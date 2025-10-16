@@ -16,13 +16,13 @@ dnf5 -y install \
 
 
 # Enable flatpack and flathub
-dnf5 install -y flatpak
-flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+mkdir -p /etc/flatpak/remotes.d && \
+wget -q https://dl.flathub.org/repo/flathub.flatpakrepo -P /etc/flatpak/remotes.d && 
+wget -q https://apt.pop-os.org/cosmic/cosmic.flatpakrepo -P /etc/flatpak/remotes.d
 
 # this installs a package from fedora repos
 dnf5 install -y tmux
 dnf5 install -y just 
-
 
 # Use a COPR Example:
 #
@@ -31,7 +31,27 @@ dnf5 install -y just
 # Disable COPRs so they don't end up enabled on the final image:
 # dnf5 -y copr disable ublue-os/staging
 
+### System Configuration
+#
+# Set a default hostname.
+# You can change "borisOS" to any hostname you like.
+echo "borisOS" > /etc/hostname
+
+### Install NVIDIA drivers
+#
+# Note: This is a simplified version of the driver installation.
+# For a more robust setup, consider basing your image on one of
+# Universal Blue's pre-made NVIDIA images, like `ghcr.io/ublue-os/bazzite-nvidia`.
+#
+# Install NVIDIA drivers without running post-install scripts
+# The akmods service will build the driver on first boot
+dnf5 install -y --setopt=tsflags=noscripts akmod-nvidia
+dnf5 install -y xorg-x11-drv-nvidia-cuda
+
+# Add kernel arguments to enable NVIDIA drivers
+mkdir -p /etc/systemd/system/etc-systemd-system.conf.d/
+printf "[Manager]\nDefaultEnvironment=KERNEL_ARGS=%s\n" "rd.driver.blacklist=nouveau modprobe.blacklist=nouveau nvidia-drm.modeset=1" > /etc/systemd/system/etc-systemd-system.conf.d/20-nvidia-kargs.conf
+
 #### Example for enabling a System Unit File
-
+systemctl enable akmods.service
 systemctl enable podman.socket
-
